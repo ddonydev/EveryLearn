@@ -1,4 +1,4 @@
-![CODING5](https://i.imgur.com/ggci7Mm.png "CODING5 Logo")
+
 
 # 📢INTRODUCE
 ## 기획 의도 : 온라인 강의와 채용 서비스를 제공하는 자기 계발 재능 공유 플랫폼
@@ -100,3 +100,9 @@ QNA 게시판
 
 ![CODING5](https://i.imgur.com/UrrmP7J.png "DBMODELING")
 - https://www.erdcloud.com/d/7zdmyQNvEDwp7tem5
+
+
+  <a href="https://recondite-leopard-52c.notion.site/EveryLearn-fe464345e8ea42058c980fa46f9dd7eb">
+	  <img src="https://img.shields.io/badge/Notion-000000?style=flat&logo=Notion&logoColor=white" />
+  </a> 
+
