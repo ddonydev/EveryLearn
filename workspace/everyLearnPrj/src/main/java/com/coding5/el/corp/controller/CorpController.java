@@ -48,6 +48,7 @@ public class CorpController {
 		
 		int result = cs.join(vo);
 		
+		// 결과값이 나오지 않으면 에러페이지로 이동
 		if(result != 1) {
 			return "common/error";
 		}
@@ -75,14 +76,13 @@ public class CorpController {
 		
 		CorpVo corpMember = cs.login(vo);
 		
-		
+		// 로그인에 실패하면 로그인 페이지로 이동
 		if(corpMember == null) {
 			model.addAttribute("msg", "error");
 			return "emp/member/login";
 		}
 		
-		log.info(corpMember.getStatusYn());
-		
+		// session에 담아준다
 		session.setAttribute("corpMember", corpMember);
 		return "redirect:/corp/mypage";
 	}
@@ -104,13 +104,16 @@ public class CorpController {
 	@PostMapping("send-mail")
 	public String sendMail(@RequestParam(value="id") String id) {
 		
+		// 아이디가 없거나 입력된 값이 없다면동에러페이지로 이동
 		if(id == null || id.equals("")) {
 			return "redirect:/common/error";
 		}
 		
+		// 입력된 아이디를 vo에 담아주기
 		CorpVo vo = new CorpVo();
 		vo.setId(id);
 		
+		// 메일 전송 서비스 
 		int mail = cms.mailService(vo);
 		
 		return "redirect:/corp/login";
@@ -120,6 +123,7 @@ public class CorpController {
 	@GetMapping("authentication")
 	public String resetPwd(@RequestParam(value = "num", defaultValue = "") String num) {
 		
+		// 랜덤 번호가 없으면 에러페이지로 이동
 		if(num == null || num.equals("")) {
 			return "redirect:/common/error";
 		}
@@ -131,8 +135,10 @@ public class CorpController {
 	@PostMapping("authentication")
 	public String resetPwd(@RequestParam(value = "num") String num, String pwd) {
 		
+		// 비밀번호 재설정 서비스
 		int result = cs.updatePwd(num, pwd);
 		
+		// 재설정 링크가 만료 되었다면 -> 토큰 만료 페이지로 이동
 		if(result != 1) {
 			return "redirect:/expired-token";
 		}
@@ -144,30 +150,33 @@ public class CorpController {
 	// 기업 로그아웃
 	@GetMapping("logout")
 	public String logout(HttpSession session) {
+		// 세션 무효화
 		session.invalidate();
 		return "emp/member/login";
 	}
 	
 	// 기업 회원 탈퇴
 	@PostMapping("quit")
-	public String quitCorpMember(HttpSession session, CorpVo vo) {
+	public String quitCorpMember(HttpSession session) {
 		
+		// session에 담긴 기업 회원 가져오기
 		CorpVo corpMember = (CorpVo) session.getAttribute("corpMember");
 		
-		
+		// 기업회원이 없다면 로그인 페이지로 이동
 		if(corpMember == null) {
 			return "redirect:/corp/login";
 		}
-	
-		vo.setNo(corpMember.getNo());
 		
-		int result = cs.quitCorpMember(vo);
+		// 회원 탈퇴 서비스
+		int result = cs.quitCorpMember(corpMember);
 		
+		// 회원 탈퇴가 되지 않았다면 에러페이지로 이동
 		if(result != 1) {
 			log.info("" + result);	
 			return "common/error";
 		}
 		
+		// 되었다면 세션 무효화
 		session.invalidate();
 		
 		return "redirect:/corp/login";
@@ -178,12 +187,15 @@ public class CorpController {
 	@GetMapping("mypage")
 	public String mypage(HttpSession session, Model model) {
 		
+		// session에 담긴 기업 회원 가져오기
 		CorpVo corpMember = (CorpVo) session.getAttribute("corpMember");
 		
+		// 세션에 담긴 기업 회원이 없다면 로그인 페이지로(마이페이지에선 로그인을 해야 이용 가능)
 		if(corpMember == null) {
 			return "redirect:/corp/login";
 		}
 		
+		// 기업 회원의 마이페이지 가져오는 서비스
 		CorpVo cv = cs.selectMypage(corpMember);
 		
 		session.setAttribute("corpMember", cv);
@@ -196,16 +208,18 @@ public class CorpController {
 	@PostMapping("mypage")
 	public String mypage(HttpSession session, CorpVo vo) {
 		
+		// session에 담긴 기업 회원 가져오기
 		CorpVo corpMember = (CorpVo) session.getAttribute("corpMember");
+		// session에 담긴 회원 no를 가져와서 form 데이터를 가진 vo에 넣어준다
 		vo.setNo(corpMember.getNo());
 		
 		// 회사 로고  이미지 저장
 		String logoName = "";
+		// 만약 로고 파일이 없다면드업로드
 		if(!vo.getLogoFile().isEmpty()) {
 			logoName = FileUploader.upload(session, vo.getLogoFile());
 			vo.setLogo(logoName);
 		}
-		
 		
 		// 회사 이미지 저장
 		String thumbName = "";
@@ -214,7 +228,7 @@ public class CorpController {
 			vo.setThumb(thumbName);
 		}
 		
-		
+		// 기업 마이페이지 수정 서비스
 		int result = cs.updateCorpInfo(vo);
 		
 		log.info(vo.toString());
@@ -224,7 +238,6 @@ public class CorpController {
 			return "common/error";
 		}
 		
-
 		return "redirect:/corp/mypage";
 	}
 	
@@ -232,20 +245,26 @@ public class CorpController {
 	@GetMapping("register-position")
 	public String jobPost(HttpSession session, String no, Model model) {
 		
+		// session에 담긴 기업 회원 가져오기
 		CorpVo corpMember = (CorpVo) session.getAttribute("corpMember");
 		
+		// session에 담긴 회원 정보가 없다면 로그인 페이지로 이동
 		if(corpMember == null) {
 			return "redirect:/corp/login";
 		}
 		
+		// 공고 번호가 쿼리스트링으로 입력이 되면
 		if(no != null) {
+			// 공고를 공고no로 조회해오기 
 			EmploymentVo ev = cs.selectEmployment(corpMember, no);
-
+			
+			// 해당 회원의 공고가 아니거나, 공고가 없다면 -> 마이페이지로 이동
 			if(ev == null) {
-				return "redirect:/corp/login";
+				return "redirect:/corp/mypage";
 			}
 			log.info(ev.getDeadline());
 			
+			// model객체에 담아 view에 데이터를 전달
 			model.addAttribute("ev", ev);
 		}
 		
@@ -256,13 +275,17 @@ public class CorpController {
 	@PostMapping("register-position")
 	public String jobPost(EmploymentVo vo, HttpSession session){
 		
+		// session에 담긴 기업 회원 가져오기
 		CorpVo corpMember = (CorpVo) session.getAttribute("corpMember");
 		
+		// session에 담긴 회원이 없다면
 		if(corpMember == null) {
 			return "redirect:/corp/login";
 		}
 		
+		// 기업회원의 no를 가져와 공고 vo에 넣어주기
 		vo.setCorpNo(corpMember.getNo());
+		// 공고 insert 서비스
 		int result = cs.insertJobPost(vo);
 		
 		if(result != 1) {
@@ -277,16 +300,19 @@ public class CorpController {
 	@GetMapping("position")
 	public String position(HttpSession session, String no, Model model) {
 		
+		// session에 담긴 기업 회원 가져오기
 		CorpVo corpMember = (CorpVo) session.getAttribute("corpMember");
 		
 		if(corpMember == null) {
 			return "redirect:/corp/login";
 		}
 		
+		// 해당 기업 회원의 공고 조회 서비스
 		JobPostVo jp = cs.selectJobPost(corpMember, no);
 		
+		// 공고가 없다면 마이페이지로 동이동
 		if(jp == null) {
-			return "redirect:/corp/login";
+			return "redirect:/corp/mypage";
 		}
 		
 		model.addAttribute("jp", jp);
@@ -298,12 +324,14 @@ public class CorpController {
 	@PostMapping("edit-position")
 	public String editPost(HttpSession session, EmploymentVo vo) {
 		
+		// session에 담긴 기업 회원 가져오기
 		CorpVo corpMember = (CorpVo) session.getAttribute("corpMember");
 		
 		if(corpMember == null) {
 			return "redirect:/corp/login";
 		}
 		
+		// 공고 수정하기 서비스
 		int result = cs.editJobPost(vo, corpMember);
 		
 		if(result != 1) {
@@ -319,6 +347,7 @@ public class CorpController {
 	@GetMapping("delete-position")
 	public String jobPost(String no, HttpSession session) {
 		
+		// 공고 삭제스서비스
 		int result = cs.deleteJobPost(no);
 		
 		if(result != 1) {
@@ -334,23 +363,33 @@ public class CorpController {
 	@GetMapping("hiring")
 	public String hiring(Model model, @RequestParam(value="pno", defaultValue = "1") String pno, HttpSession session) {
 		
+		// session에 담긴 기업 회원 가져오기
 		CorpVo corpMember = (CorpVo) session.getAttribute("corpMember");
 		
 		if(corpMember == null) {
 			return "redirect:/corp/login";
 		}
 		
+		// session에 담긴 기업회원No를 corpNo에 담아주기
 		String corpNo = corpMember.getNo();
 		
 		
 		// 카운트
+		// 전체 채용 공고 개수 가져오기 서비스
 		int totalCount = cs.selectHiringCnt(corpNo);
+		
+		// 현재 페이지 번호(쿼리스트링에서 오는 pno는 String 타입이므로 int로 parsing 해줌)
 		int currentPage = Integer.parseInt(pno);
+		
+		// 한 페이지에 보여지는 페이징 수는 5개
 		int pageLimit = 5;
+		
+		// 한 페이지에 보여지는 게시물 개수는 10개
 		int boardLimit = 10;
 		
 		PageVo pv = Pagination.getPageVo(totalCount, currentPage, pageLimit, boardLimit);
 		
+		// 채용공고 리스트로 만들어 가져오기
 		List<EmploymentVo> list = cs.getList(pv, corpNo);
 		
 		model.addAttribute("pv", pv);
@@ -363,6 +402,7 @@ public class CorpController {
 	@GetMapping("deadline")
 	public String deadLine(Model model, @RequestParam(value="pno", defaultValue = "1") String pno, HttpSession session) {
 
+		// session에 담긴 기업 회원 가져오기
 		CorpVo corpMember = (CorpVo) session.getAttribute("corpMember");
 		
 		if(corpMember == null) {
@@ -391,6 +431,7 @@ public class CorpController {
 	@GetMapping("total")
 	public String total(Model model, @RequestParam(value="pno", defaultValue = "1") String pno, HttpSession session) {
 		
+		// session에 담긴 기업 회원 가져오기
 		CorpVo corpMember = (CorpVo) session.getAttribute("corpMember");
 		
 		if(corpMember == null) {
@@ -419,6 +460,7 @@ public class CorpController {
 	@GetMapping("applicant")
 	public String applicant(Model model, @RequestParam(value="empNo") String empNo, @RequestParam(value="pno", defaultValue = "1") String pno, HttpSession session) {
 		
+		// session에 담긴 기업 회원 가져오기
 		CorpVo corpMember = (CorpVo) session.getAttribute("corpMember");
 		
 		if(corpMember == null) {
